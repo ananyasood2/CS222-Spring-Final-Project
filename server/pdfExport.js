@@ -18,12 +18,25 @@ export async function proposalLatexToPdf(latex, title = 'proposal') {
   const pdfPath = path.join(workdir, 'proposal.pdf');
 
   try {
-    await writeFile(texPath, sanitizeLatexForExport(ensureCompleteLatexDocument(source, title)), 'utf8');
-    await execFileAsync('tectonic', ['--outdir', workdir, texPath], {
-      cwd: workdir,
-      timeout: 60000,
-      maxBuffer: 1024 * 1024 * 8
-    });
+    const cleanedLatex = sanitizeLatexForExport(ensureCompleteLatexDocument(source, title));
+    await writeFile(texPath, cleanedLatex, 'utf8');
+
+    try {
+      await execFileAsync(path.resolve(process.cwd(), 'tectonic'), ['--keep-logs', '--outdir', workdir, texPath], {
+        cwd: workdir,
+        timeout: 60000,
+        maxBuffer: 1024 * 1024 * 8
+      });
+    } catch (error) {
+      throw new Error(
+        [
+          'Tectonic PDF compile failed.',
+          error.stdout ? `STDOUT:\n${error.stdout}` : '',
+          error.stderr ? `STDERR:\n${error.stderr}` : '',
+          error.message ? `MESSAGE:\n${error.message}` : ''
+        ].filter(Boolean).join('\n\n')
+      );
+    }
 
     return await readFile(pdfPath);
   } finally {
@@ -62,6 +75,7 @@ function ensureCompleteLatexDocument(source, title) {
 \usepackage[margin=1in]{geometry}
 \usepackage[hidelinks]{hyperref}
 \usepackage{enumitem}
+\usepackage{tikz}
 \setlist{nosep}
 \title{${escapeLatex(title)}}
 \author{}
@@ -122,6 +136,10 @@ function ensureDefaultPreamble(lines) {
 
   if (!/\\usepackage(?:\[[^\]]*\])?\{enumitem\}/.test(source)) {
     next.push('\\usepackage{enumitem}');
+  }
+
+  if (!/\\usepackage(?:\[[^\]]*\])?\{tikz\}/.test(source)) {
+    next.push('\\usepackage{tikz}');
   }
 
   return next;
