@@ -1,19 +1,18 @@
 const DEFAULT_REQUIREMENTS = `Proposal must include:
 - Project title
-- Abstract
-- Motivation and gap
-- Project goal
+- Abstract or executive summary
+- Introduction and motivation
+- Related work and novelty
+- Intellectual Merit section (labeled exactly)
+- Broader Impacts section (labeled exactly)
 - Method or agent workflow
 - Figure or diagram with caption
-- Expected results
-- Research milestones with timeline estimates
-- Evaluation plan
-- Baseline, metric, test context, and success threshold
-- Related work / novelty comparison
-- Figure or diagram prompt
+- Expected results and concrete outcome
+- Research milestones with timeline
+- Evaluation plan with baseline, metric, test context, and success threshold
 - Risks and mitigation
-- Resources or budget
-- References, assumptions, or source notes`;
+- Resources and feasibility
+- References or source notes`;
 
 const EMPTY_PROJECT_FOR_SERVER = {
   title: '',
@@ -32,73 +31,111 @@ const EMPTY_PROJECT_FOR_SERVER = {
   requirements: DEFAULT_REQUIREMENTS
 };
 
-const SYSTEM_PROMPT = `You are a research proposal pre-mortem agent for a CS research proposal.
+const SYSTEM_PROMPT = `You are an expert research proposal writer for a CS graduate course.
 
-Use the selected reviewer persona when provided. Imagine this proposal was submitted and REJECTED. Work backward to find the most likely reasons why.
+Your job: (1) write a polished, course-compliant research proposal in LaTeX, and (2) run a pre-mortem to predict why it might be rejected.
 
-Return strict JSON with this shape:
+COURSE REQUIREMENTS — NON-NEGOTIABLE:
+1. HARD 3-PAGE MAXIMUM. If your LaTeX compiles to more than 3 pages, you have failed. Cut mercilessly.
+2. EVERY section must be SHORT. Here are the exact word budgets — do not exceed them:
+   - Abstract: 4 sentences max
+   - Introduction & Motivation: 4 sentences max
+   - Related Work & Novelty: 5 sentences max
+   - Intellectual Merit: 4 bullet points, 1 sentence each
+   - Broader Impacts: 4 bullet points, 1 sentence each
+   - Method: 6 numbered steps, 1-2 sentences each
+   - Figure: inline in Methods, compact tabular diagram only
+   - Expected Results: 3 bullet points, 1 sentence each
+   - Timeline: 6 milestones, ONE LINE each (e.g. "Months 1-3: Literature review and persona design.")
+   - Evaluation: 4 bullet points (baseline, metric, test context, threshold), 1-2 sentences each
+   - Risks: 3 risks, 2 sentences each (risk + mitigation on same line)
+   - Resources: 4 bullet points, 1 sentence each
+   - References: inline single-line format, NOT a thebibliography environment
+3. DO NOT use \\thebibliography or \\bibitem — they add a page break. Instead write references as a compact inline list like: "Klein (2007). Pre-mortem. \\textit{HBR}. $\\cdot$ Brown et al. (2020). Few-shot learners. \\textit{NeurIPS}."
+4. DO NOT use \\newpage anywhere.
+5. DO NOT invent fake citations like arXiv:XXXXX. Only cite real papers or mark as assumption.
+6. The figure must stay inline inside the Methods section — no \\begin{figure}[h] that floats to another page. Use \\begin{center}...\\captionof{figure}{...}\\end{center} instead.
+7. Must include ALL required labeled sections in this order: Abstract, Introduction and Motivation, Related Work and Novelty, Intellectual Merit, Broader Impacts, Method and Agent Workflow, Expected Results, Research Milestones and Timeline, Evaluation Plan, Risks and Mitigation, Resources and Feasibility, References. 
+The required figure must appear inline inside Method and Agent Workflow with a caption.
+8. Mark every unsupported claim as an assumption or cite a real source.
+
+RESEARCH QUALITY REQUIREMENTS:
+- The proposal must read like a credible research plan, not a product description.
+- The central research question must be explicit.
+- The proposal must include 2-3 concrete aims.
+- The method must explain inputs, processing steps, outputs, and human feedback points.
+- The evaluation will compare an initial proposal draft against a revised draft after applying the agent's rescue plan. Metrics will include section coverage, number of unsupported claims 
+flagged and resolved, presence of baseline/metric/test-context/success-threshold elements, and score changes across novelty, clarity, feasibility, evaluation rigor, gap specificity, and method 
+concreteness. Success will be defined as a revised draft that improves by at least two points in two weak dimensions and resolves all major missing evaluation-plan and source-note flags.
+- Do not claim the system will increase funding success rates unless framed as an assumption.
+- Use "proposal quality indicators" instead of "acceptance rates."
+- The novelty claim must compare against existing AI writing tools, automated feedback systems, and peer review support tools.
+- If real related papers are not available, label the related-work comparison as source notes or assumptions.
+- The proposal must explain what Stage 2 produces: a polished proposal PDF, source notes, figure/diagram, transcript, and revision evidence.
+- Any claim that the system improves proposal quality must be framed as something the evaluation will test, not as a guaranteed result.
+
+- In the Method or Introduction section, include 2-3 clear aims:
+  Aim 1: Build the structured proposal intake and drafting workflow.
+  Aim 2: Implement reviewer-style pre-mortem critique and rescue plans.
+  Aim 3: Evaluate before/after proposal quality using measurable rubric scores.
+
+
+FIGURE REQUIREMENT:
+The figure must be a compact workflow/architecture diagram with at least 5 labeled nodes:
+Rough Idea, Structured Project State, Proposal Draft, Pre-Mortem Critic, Rescue Plan, Revised Proposal.
+The caption must explain what information flows between stages.
+
+The proposal must clearly state that the Stage 2/Stage 3 artifact is:
+- proposal.pdf
+- proposal.tex/source
+- source notes or references
+- workflow figure source
+- interaction transcript
+- AI usage log
+- before/after revision evidence
+
+WRITING RULES:
+- Use "will" not "may" or "might".
+- No jargon without a plain-English definition.
+- Broader Impacts must name specific populations that benefit.
+- Intellectual Merit must explain what new knowledge this creates.
+
+LaTeX RULES:
+- \\documentclass[11pt]{article} with 1-inch margins, \\usepackage{times}.
+- Use \\section*{} for all headings.
+- No TikZ, no \\includegraphics, no external images, no minted, no shell-escape.
+- Build figure using tabular, fbox, and $\\downarrow$ only.
+- \\setlist{noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt}
+- Must compile without errors.
+
+STAGE 2 PROPOSAL QUALITY TARGET:
+The generated proposal must be a credible research plan for the current working website, not an imaginary future system. It should emphasize a human-in-the-loop proposal pre-mortem workflow where the agent drafts, critiques, scores, generates rescue plans, and supports revision. The proposal must explain how quality improves over time through re-running the pre-mortem after revisions.
+
+The evaluation must be realistic for a course project. Do not use journal acceptance rates, conference acceptance rates, or real funding outcomes as the main metric. Instead, evaluate before/after proposal quality using section coverage, unsupported-claim resolution, evaluation-plan completeness, source-note completeness, and score changes across novelty, clarity, feasibility, evaluation rigor, gap specificity, and method concreteness.
+
+The final artifact must be described clearly: a polished proposal PDF, proposal source, references/source notes, figure or diagram source, transcript export, AI usage log, and before/after revision evidence.
+
+The proposal must include 2-3 concrete aims:
+Aim 1: Build a structured intake and proposal drafting workflow.
+Aim 2: Implement reviewer-style pre-mortem critique with personas, assumptions, gap checks, and rescue plans.
+Aim 3: Evaluate whether applying rescue plans improves measurable proposal-quality indicators.
+
+Return strict JSON:
 {
-  "proposalLatex": "complete, compile-ready LaTeX source for proposal.tex",
-  "complianceMatrix": [
-    {
-      "requirement": "requirement text",
-      "status": "Covered | Needs work",
-      "evidence": "short evidence",
-      "fix": "short next action"
-    }
-  ],
-  "evaluationReport": "plain text or Markdown report with missing items, weak claims, timeline risks, and revision priorities",
+  "proposalLatex": "complete compile-ready LaTeX",
+  "complianceMatrix": [{"requirement":"...","status":"Covered | Needs work","evidence":"...","fix":"..."}],
+  "evaluationReport": "Markdown: which sections are missing or weak, estimated page count, top 3 revision priorities",
   "preMortem": {
-    "scores": {
-      "novelty": 0,
-      "clarity": 0,
-      "feasibility": 0,
-      "evaluation_rigor": 0,
-      "gap_specificity": 0,
-      "method_concreteness": 0
-    },
-    "risks": [
-      {
-        "severity": "high | medium | low",
-        "title": "short title",
-        "objection": "1-2 sentence reviewer objection",
-        "rescue": "1-2 sentence concrete fix the student should make"
-      }
-    ],
-    "assumptions": [
-      {
-        "claim": "the unsupported claim found in the proposal",
-        "action": "what to do: cite X, soften to Y, or remove"
-      }
-    ],
-    "weaknessPriority": ["ordered list of the top 3 things to fix first"]
+    "scores": {"novelty":0,"clarity":0,"feasibility":0,"evaluation_rigor":0,"gap_specificity":0,"method_concreteness":0},
+    "risks": [{"severity":"high|medium|low","title":"...","objection":"...","rescue":"..."}],
+    "assumptions": [{"claim":"...","action":"..."}],
+    "weaknessPriority": ["3 items"]
   },
-  "questions": ["short clarifying question"]
+  "questions": ["..."]
 }
 
-Rules:
-- The proposal artifact must be LaTeX, not Markdown.
-- Return a complete LaTeX document with \\documentclass[11pt]{article}, 1-inch margins, title, sections, and bibliography/source notes.
-- Use compile-safe LaTeX. Avoid minted, shell-escape, external images, custom fonts, or packages that require extra system tools.
-- Do not use \\includegraphics or reference external image files. Build figures directly in LaTeX with text boxes, minipages, tabular layouts, lists, or simple arrows.
-- Do not use TikZ, pgf, tikzpicture, arrows.meta, node diagrams, or \\draw commands. Build diagrams only with tabular, minipage, fbox, text arrows, and itemized lists.
-- Build figures directly in LaTeX with tabular, minipage, fbox, text arrows, and itemized lists only.
-- Write the final artifact as a research proposal, not as a short course implementation report.
-- Keep the proposed research plan credible, appropriately scoped, and supported by milestones, resources, risks, and evaluation criteria.
-- Mark unsupported claims as assumptions.
-- Include a concrete agent workflow when the method involves an agent.
-- Include at least one LaTeX-native figure, diagram, workflow chart, or architecture sketch with a caption.
-- Do not invent citations. Use source notes or assumptions when sources are missing.
-- For the preMortem scores, rate each dimension 0-10 where 10 is strongest. Include persona-specific objections that match the selected reviewer persona if one is provided. Be harsh and specific.
-- Do not invent citations. Use source notes or assumptions when sources are missing.
-- For the preMortem scores, rate each dimension 0-10 where 10 is strongest. Include persona-specific objections that match the selected reviewer persona if one is provided. Be harsh and specific.
-- The "preMortem" object is mandatory. Never omit it.
-- The "preMortem.scores" object must include numeric 0-10 scores for novelty, clarity, feasibility, evaluation_rigor, gap_specificity, and method_concreteness.
-- The "preMortem.risks" array must include at least 3 reviewer objections with severity, title, objection, and rescue.
-- The "preMortem.assumptions" array must include at least 2 unsupported claims with actions.
-- The "preMortem.weaknessPriority" array must include exactly 3 top revision priorities.
-- If any field is uncertain, still return the field and mark uncertainty inside the text. Do not omit required keys.
-- Include 3-5 risks and 2-4 assumptions in the preMortem.`;
+MANDATORY: preMortem always present. 3-5 risks, 2-4 assumptions, exactly 3 weaknessPriority items, all six scores as numbers 0-10. Be harsh.`;
+
 
 const PROPOSAL_RESPONSE_SCHEMA = {
   type: 'object',
@@ -951,7 +988,7 @@ function buildFieldSuggestions(project) {
       label: 'Figure / Diagram Prompt',
       value:
         project.figurePrompt ||
-        'Draw a left-to-right workflow: rough idea → section coverage checker → novelty comparator → pre-mortem scoring/radar chart → reviewer persona objections → rescue plan → revised proposal/PDF/transcript.',
+        'Draw a left-to-right workflow: rough idea → section coverage checker → novelty comparator → pre-mortem score bars → reviewer persona objections → rescue plan → revised proposal/PDF/transcript.',
       confidence: project.figurePrompt ? 'High' : 'Medium',
       reason: 'A diagram prompt helps produce the required figure without relying on external image files.'
     },
@@ -1318,18 +1355,37 @@ function readModelContent(data) {
 
 function parseJsonContent(content) {
   const trimmed = clean(content);
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fenced?.[1] || trimmed;
 
+  // Strip outer code fences including ```json and ```
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```\s*$/i);
+  const candidate = fenced ? fenced[1].trim() : trimmed;
+
+  // Try direct parse
   try {
     return JSON.parse(candidate);
   } catch {
+    // Try to find JSON object anywhere in the string
+    const firstBrace = candidate.indexOf('{');
+    const lastBrace = candidate.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return JSON.parse(candidate.slice(firstBrace, lastBrace + 1));
+      } catch {
+        // fall through
+      }
+    }
+
     return {
       proposalLatex: looksLikeLatex(trimmed) ? trimmed : '',
       complianceMatrix: [],
-      evaluationReport: '# Evaluation Report\n\nThe API returned text that was not JSON.',
-      preMortem: null,
-      questions: ['Should the API prompt be tightened to return strict JSON?']
+      evaluationReport: '# Evaluation Report\n\nThe API returned text that could not be parsed as JSON. Check the AI Log tab.',
+      preMortem: {
+        scores: { novelty: 5, clarity: 5, feasibility: 5, evaluation_rigor: 5, gap_specificity: 5, method_concreteness: 5 },
+        risks: [{ severity: 'high', title: 'JSON parse failed', objection: 'The model response could not be parsed. Check the AI Log tab.', rescue: 'Re-run generation.' }],
+        assumptions: [{ claim: 'Model response was not valid JSON', action: 'Check the AI Log tab and re-run.' }],
+        weaknessPriority: ['Re-run the pre-mortem', 'Check AI Log for raw response', 'Verify LLM_MODEL is set correctly']
+      },
+      questions: ['The model response was not valid JSON. Check the AI Log tab.']
     };
   }
 }
@@ -1358,28 +1414,43 @@ function coerceResult(result, projectWithPapers, checklist) {
 
 function requireValidPreMortem(preMortem) {
   if (!preMortem || typeof preMortem !== 'object') {
-    throw new Error('Gemini did not return a preMortem object. Re-run generation or tighten the prompt/schema.');
+    return {
+      scores: { novelty: 5, clarity: 5, feasibility: 5, evaluation_rigor: 5, gap_specificity: 5, method_concreteness: 5 },
+      risks: [
+        { severity: 'high', title: 'Pre-mortem unavailable', objection: 'The model did not return a pre-mortem object. Re-run generation.', rescue: 'Click Re-run Pre-Mortem to try again.' }
+      ],
+      assumptions: [
+        { claim: 'Pre-mortem data missing', action: 'Re-run generation with a tighter prompt.' }
+      ],
+      weaknessPriority: ['Re-run the pre-mortem', 'Check the AI Log tab for the raw response', 'Tighten the system prompt if JSON is malformed']
+    };
   }
 
   const scores = preMortem.scores || {};
-  const requiredScores = ['novelty', 'clarity', 'feasibility', 'evaluation_rigor', 'gap_specificity'];
+  const requiredScores = ['novelty', 'clarity', 'feasibility', 'evaluation_rigor', 'gap_specificity', 'method_concreteness'];
 
-  const missingScores = requiredScores.filter((key) => typeof scores[key] !== 'number');
+  // Fill in any missing scores with 5 instead of throwing
+  requiredScores.forEach((key) => {
+    if (typeof scores[key] !== 'number') scores[key] = 5;
+  });
 
-  if (missingScores.length) {
-    throw new Error(`Gemini returned incomplete preMortem scores. Missing: ${missingScores.join(', ')}`);
+  // Fill in missing risks instead of throwing
+  if (!Array.isArray(preMortem.risks) || preMortem.risks.length < 1) {
+    preMortem.risks = [
+      { severity: 'medium', title: 'Risks not returned', objection: 'The model did not return risks. Re-run generation.', rescue: 'Re-run the pre-mortem.' }
+    ];
   }
 
-  if (!Array.isArray(preMortem.risks) || preMortem.risks.length < 3) {
-    throw new Error('Gemini returned incomplete preMortem risks. Expected at least 3 risks.');
+  // Fill in missing assumptions instead of throwing
+  if (!Array.isArray(preMortem.assumptions) || preMortem.assumptions.length < 1) {
+    preMortem.assumptions = [
+      { claim: 'Assumptions not returned', action: 'Re-run generation.' }
+    ];
   }
 
-  if (!Array.isArray(preMortem.assumptions) || preMortem.assumptions.length < 2) {
-    throw new Error('Gemini returned incomplete assumption audit. Expected at least 2 assumptions.');
-  }
-
-  if (!Array.isArray(preMortem.weaknessPriority) || preMortem.weaknessPriority.length < 3) {
-    throw new Error('Gemini returned incomplete weakness priority list. Expected at least 3 items.');
+  // Fill in missing weakness priority instead of throwing
+  if (!Array.isArray(preMortem.weaknessPriority) || preMortem.weaknessPriority.length < 1) {
+    preMortem.weaknessPriority = ['Re-run the pre-mortem', 'Check AI Log for raw response', 'Verify prompt returns valid JSON'];
   }
 
   return preMortem;
