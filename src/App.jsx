@@ -462,7 +462,23 @@ function App() {
       setMemorySavedAt(snapshot.savedAt || '');
       setError('');
 
-      updatePdfUrl('');
+      if (snapshot.result?.proposalLatex) {
+        try {
+          const nextPdfUrl = await exportPdfUrl(
+            snapshot.result.proposalLatex,
+            snapshot.project?.title || 'proposal'
+          );
+          updatePdfUrl(nextPdfUrl);
+        } catch (pdfError) {
+          updatePdfUrl('');
+          setRunLog((current) => [
+            ...current,
+            logEntry('PDF', `PDF preview could not render after reload: ${readError(pdfError)}`)
+          ]);
+        }
+      } else {
+        updatePdfUrl('');
+      }
 
       if (!silent) {
         setRunLog((current) => [...current, logEntry('Memory', 'Reloaded saved workspace memory.')]);
@@ -738,11 +754,15 @@ function App() {
             </section>
           </div>
 
-          <div className="workflow-columns">
-            <section className="workflow-panel">
-              <h2>Run Log</h2>
+          <div className="artifact-workspace">
+            <section className="workflow-panel run-log-top">
+              <div className="run-log-header">
+                <h2>Run Log</h2>
+                <span>{runLog.length} events</span>
+              </div>
+
               {runLog.length ? (
-                <ol className="run-log">
+                <ol className="run-log run-log-horizontal">
                   {runLog.map((entry) => (
                     <li key={entry.id}>
                       <span>{entry.stage}</span>

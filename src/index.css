@@ -1147,3 +1147,42 @@ th {
   background: #eef1ff;
   color: #344075;
 }
+
+.artifact-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.run-log-top {
+  width: 100%;
+  max-height: 190px;
+  overflow: hidden;
+}
+
+.run-log-horizontal {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 4px 12px;
+  max-height: 140px;
+  scroll-snap-type: x proximity;
+}
+
+.run-log-horizontal li {
+  min-width: 240px;
+  max-width: 280px;
+  height: 110px;
+  max-height: 110px;
+  flex: 0 0 auto;
+  overflow-y: auto;
+  scroll-snap-align: start;
+}
+
+.run-log-horizontal li p {
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
